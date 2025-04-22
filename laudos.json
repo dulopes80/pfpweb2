@@ -1,0 +1,47 @@
+{
+  "Espirometria": {
+    "Normal": "Espirometria com padrões dentro da normalidade, sem evidências de limitação ao fluxo aéreo.",
+    "Obstrução leve": "Distúrbio ventilatório obstrutivo de grau leve",
+    "Obstrução moderada": "Distúrbio ventilatório obstrutivo de grau moderado",
+    "Obstrução grave": "Obstrução grave, com VEF1 bastante reduzido, evidenciando limitação funcional importante ao fluxo aéreo.",
+    "Obstrução muito grave": "Limitação ao fluxo aéreo muito grave, com VEF1 menor que 30% do previsto e relação VEF1/CVF reduzida, compatível com doença obstrutiva avançada.",
+    "Obstrução com resposta broncodilatadora significativa": "Após broncodilatador, houve aumento do VEF1 ≥ 200 mL e ≥ 12% em relação ao valor basal, caracterizando resposta broncodilatadora significativa.",
+    "Obstrução sem resposta broncodilatadora significativa": "Após broncodilatador, não houve aumento significativo do VEF1, caracterizando ausência de resposta broncodilatadora significativa.",
+    "Padrão restritivo sugestivo": "Redução proporcional da CVF e do VEF1 com relação VEF1/CVF preservada ou aumentada, sugerindo padrão restritivo. Confirmação requer análise dos volumes pulmonares.",
+    "Padrão não conclusivo": "Espirometria com alteração dos parâmetros, porém sem padrão obstrutivo ou sugestivo de restrição claramente definido. Necessária avaliação complementar com volumes pulmonares."
+  },
+  "Resistência das vias aéreas": {
+    "Normal": "Resistência das vias aéreas dentro dos limites da normalidade.",
+    "Aumento leve da resistência": "Resistência das vias aéreas levemente aumentada, podendo refletir obstrução brônquica de grau leve.",
+    "Aumento moderado da resistência": "Resistência moderadamente aumentada, compatível com obstrução de vias aéreas, geralmente periféricas.",
+    "Aumento grave da resistência": "Resistência das vias aéreas gravemente aumentada, indicando limitação importante ao fluxo aéreo, típica de doenças obstrutivas graves.",
+    "Redução da condutância específica (sGaw)": "Condutância específica das vias aéreas reduzida, parâmetro sensível para detecção precoce de obstrução de pequenas vias aéreas."
+  },
+  "Volumes pulmonares": {
+    "Normal": "Volumes pulmonares dentro da normalidade, sem evidências de hiperinsuflação ou restrição.",
+    "Restrição leve": "Redução leve da capacidade pulmonar total (CPT), compatível com padrão restritivo leve.",
+    "Restrição moderada": "Redução moderada da CPT, sugerindo restrição ventilatória de grau moderado.",
+    "Restrição grave": "CPT significativamente reduzida, compatível com restrição grave à expansão pulmonar.",
+    "Hiperinsuflação pulmonar": "Aumento da CPT, geralmente associado a aprisionamento aéreo em doenças obstrutivas crônicas.",
+    "Aumento do volume residual (VR)": "Volume residual aumentado, indicando aprisionamento aéreo. Pode ocorrer mesmo com CPT normal.",
+    "Redução isolada da CVF": "CVF reduzida com CPT normal ou aumentada, podendo indicar aprisionamento sem padrão restritivo verdadeiro (padrão pseudorrestritivo)."
+  },
+  "Difusão de CO": {
+    "DLCO normal": "Capacidade de difusão do monóxido de carbono dentro dos limites da normalidade, sem alterações significativas na barreira alvéolo-capilar.",
+    "DLCO reduzida leve": "DLCO discretamente reduzida, podendo ocorrer em tabagistas, anemias ou doenças pulmonares iniciais.",
+    "DLCO reduzida moderada": "DLCO moderadamente reduzida, sugerindo comprometimento da membrana alvéolo-capilar como na fibrose pulmonar ou DPOC avançada.",
+    "DLCO reduzida grave": "DLCO gravemente reduzida, indicando comprometimento importante da difusão alveolar, típica de doenças intersticiais avançadas ou enfisema grave.",
+    "DLCO aumentada": "Aumento da DLCO, podendo ocorrer em situações como hemorragia alveolar, policitemia, ou em atletas.",
+    "DLCO corrigida por Hb normal": "Após correção pela hemoglobina, a DLCO permanece dentro dos limites da normalidade.",
+    "DLCO corrigida por Hb reduzida": "Após correção pela hemoglobina, a DLCO corrigida mostra redução compatível com alteração verdadeira da difusão."
+  },
+  "Pressões respiratórias máximas": {
+    "Força muscular respiratória normal": "Pressões respiratórias máximas dentro dos limites da normalidade, sem evidências de fraqueza muscular inspiratória ou expiratória.",
+    "Fraqueza inspiratória leve": "Pimax levemente reduzida, podendo indicar início de comprometimento da musculatura inspiratória.",
+    "Fraqueza inspiratória moderada": "Pimax moderadamente reduzida, compatível com disfunção muscular inspiratória clinicamente relevante.",
+    "Fraqueza inspiratória grave": "Pimax gravemente reduzida, sugerindo fraqueza importante da musculatura inspiratória, como em doenças neuromusculares.",
+    "Fraqueza expiratória leve": "Pemax levemente reduzida, podendo refletir redução da força dos músculos expiratórios.",
+    "Fraqueza expiratória moderada": "Pemax moderadamente reduzida, compatível com disfunção muscular expiratória.",
+    "Fraqueza expiratória grave": "Pemax severamente reduzida, indicativa de fraqueza muscular expiratória importante, com risco de ineficácia de tosse e acúmulo de secreções."
+  }
+}
