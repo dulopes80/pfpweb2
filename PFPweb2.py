@@ -21,17 +21,15 @@ st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 # --------------------------------------------------------
 # Definição de caminhos relativos (baseados na raiz do repositório)
 # --------------------------------------------------------
-PASTA_PROJETO = os.path.dirname(__file__)  # Diretório do script
+PASTA_PROJETO = os.path.dirname(__file__)  # Diretório onde este script está
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
-
-# Se existir a pasta Desktop, será utilizada; caso contrário, um diretório temporário
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 if os.path.isdir(desktop_path):
     CAMINHO_SAIDA = desktop_path
 else:
     CAMINHO_SAIDA = tempfile.gettempdir()
 
-# Arquivos de carimbo e marca d'água
+# Arquivos de carimbos e marca d'água
 CAMINHO_CARIMBOS = PASTA_PROJETO  
 CAMINHO_MARCA = os.path.join(PASTA_PROJETO, "marca2.pdf")
 
@@ -61,28 +59,38 @@ def salvar_laudos(laudos):
 
 def visualizar_pdf_blob(pdf_file):
     """
-    Essa função lê o PDF, o codifica em base64 e utiliza JavaScript para criar um blob,
-    abrindo o PDF em uma nova aba. Essa abordagem contorna problemas de conteúdo misto no Chrome.
+    Em vez de abrir uma nova aba com window.open(), essa função
+    cria um HTML que, via JavaScript, decodifica o PDF (em base64),
+    gera um blob URL e o atribui a um <iframe> embutido na página.
     """
     if pdf_file is not None:
         pdf_file.seek(0)
         pdf_bytes = pdf_file.read()
         b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
         pdf_viewer_html = f"""
-        <script>
-            const b64Data = "{b64_pdf}";
-            const binaryString = window.atob(b64Data);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {{
-                bytes[i] = binaryString.charCodeAt(i);
-            }}
-            const blob = new Blob([bytes], {{ type: 'application/pdf' }});
-            const blobUrl = URL.createObjectURL(blob);
-            window.open(blobUrl);
-        </script>
+        <html>
+          <head>
+            <script>
+              window.onload = function() {{
+                var b64Data = "{b64_pdf}";
+                var binaryString = window.atob(b64Data);
+                var len = binaryString.length;
+                var bytes = new Uint8Array(len);
+                for (var i = 0; i < len; i++) {{
+                  bytes[i] = binaryString.charCodeAt(i);
+                }}
+                var blob = new Blob([bytes], {{type: 'application/pdf'}});
+                var blobUrl = URL.createObjectURL(blob);
+                document.getElementById("pdfViewer").src = blobUrl;
+              }};
+            </script>
+          </head>
+          <body style="margin: 0; padding: 0;">
+            <iframe id="pdfViewer" style="width: 100%; height: 900px;" frameborder="0"></iframe>
+          </body>
+        </html>
         """
-        components.html(pdf_viewer_html, height=0)
+        components.html(pdf_viewer_html, height=900)
         pdf_file.seek(0)
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
@@ -133,7 +141,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     frame_texto = Frame(margem_esquerda, pos_texto_y, largura_texto, altura_texto, showBoundary=0)
     frame_texto.addFromList([paragrafo_laudo], can)
 
-    # Inserção do carimbo utilizando leitura em memória
+    # Inserção do carimbo: lê a imagem em modo binário e cria o objeto com BytesIO
     caminho_carimbo = os.path.join(CAMINHO_CARIMBOS, nome_arquivo_carimbo)
     if os.path.exists(caminho_carimbo):
         with open(caminho_carimbo, "rb") as f:
@@ -204,7 +212,6 @@ def aba_laudar():
     if texto_final:
         st.text_area("Texto do Laudo (Edite se necessário)", value=texto_final, height=200, key="laudo_editado")
     
-    # Salva uma cópia do PDF enviado na pasta de saída
     if arquivo_pdf:
         caminho_pdf = os.path.join(CAMINHO_SAIDA, arquivo_pdf.name)
         with open(caminho_pdf, "wb") as f:
