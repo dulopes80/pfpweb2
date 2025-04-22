@@ -21,7 +21,7 @@ st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 # --------------------------------------------------------
 # Definição de caminhos relativos (baseados na raiz do repositório)
 # --------------------------------------------------------
-PASTA_PROJETO = os.path.dirname(__file__)
+PASTA_PROJETO = os.path.dirname(__file__)  # Diretório onde este script está
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 if os.path.isdir(desktop_path):
@@ -57,36 +57,24 @@ def salvar_laudos(laudos):
     with open(CAMINHO_LAUDOS, "w", encoding="utf-8") as f:
         json.dump(laudos, f, ensure_ascii=False, indent=2)
 
-def visualizar_pdf_blob(pdf_file):
+def visualizar_pdf_nova_janela(pdf_file):
     """
-    Essa função lê o PDF, o codifica em base64 e, via JavaScript,
-    cria um blob que é atribuído a um <iframe> inserido na página.
-    
-    Essa abordagem usa um snippet de JS simples (sem as tags <html> ou <noscript>)
-    para que o script seja executado imediatamente e o iframe seja atualizado.
+    Gera um link que, ao ser clicado, abre o PDF em uma nova aba.
+    Utilizamos uma URL em base64 para que o navegador abra o arquivo.
     """
     if pdf_file is not None:
         pdf_file.seek(0)
         pdf_bytes = pdf_file.read()
         b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-        pdf_viewer_html = f"""
-<script>
-(function() {{
-    var b64Data = "{b64_pdf}";
-    var binaryString = window.atob(b64Data);
-    var len = binaryString.length;
-    var bytes = new Uint8Array(len);
-    for (var i = 0; i < len; i++) {{
-        bytes[i] = binaryString.charCodeAt(i);
-    }}
-    var blob = new Blob([bytes], {{type: 'application/pdf'}});
-    var blobUrl = URL.createObjectURL(blob);
-    document.getElementById("pdf-iframe").src = blobUrl;
-}})();
-</script>
-<iframe id="pdf-iframe" style="width: 100%; height: 900px;" frameborder="0"></iframe>
-        """
-        components.html(pdf_viewer_html, height=900)
+        # Cria um link com target="_blank" para abrir numa nova aba
+        link_html = f'''
+        <div style="text-align: center; margin-bottom: 1rem;">
+          <a href="data:application/pdf;base64,{b64_pdf}" target="_blank" style="font-size: 18px; text-decoration: underline;">
+            Clique aqui para visualizar o PDF em nova janela
+          </a>
+        </div>
+        '''
+        st.markdown(link_html, unsafe_allow_html=True)
         pdf_file.seek(0)
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
@@ -196,7 +184,8 @@ def aba_laudar():
     
     arquivo_pdf = st.file_uploader("Selecione o arquivo PDF", type="pdf")
     if arquivo_pdf:
-        visualizar_pdf_blob(arquivo_pdf)
+        # Chama a função que gera o link para abrir o PDF em nova janela.
+        visualizar_pdf_nova_janela(arquivo_pdf)
     
     st.markdown("### Selecione os textos que deseja incluir")
     selecionados = []
