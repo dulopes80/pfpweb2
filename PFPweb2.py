@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import os
 import json
 import base64
@@ -26,7 +27,7 @@ desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 CAMINHO_SAIDA = desktop_path if os.path.isdir(desktop_path) else tempfile.gettempdir()
 
 # Arquivos de carimbos e marca d'água
-CAMINHO_CARIMBOS = PASTA_PROJETO  
+CAMINHO_CARIMBOS = PASTA_PROJETO
 CAMINHO_MARCA = os.path.join(PASTA_PROJETO, "marca2.pdf")
 
 DIC_CARIMBOS = {
@@ -55,21 +56,22 @@ def salvar_laudos(laudos):
 
 def visualizar_pdf_simples(pdf_file):
     """
-    Esta função converte automaticamente o PDF para base64
-    e insere-o em um <object> HTML para visualização na página.
-    Caso o navegador não suporte PDFs embutidos, é exibido um link para abrir o PDF em nova aba.
+    Lê o PDF, converte-o para base64 e monta um iframe simples
+    para exibir o PDF na página. Essa abordagem não tem fallback,
+    então se o navegador suportar a visualização, o PDF será mostrado.
     """
     if pdf_file is not None:
         pdf_file.seek(0)
         pdf_bytes = pdf_file.read()
         b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-        html = f"""
-        <object data="data:application/pdf;base64,{b64_pdf}" type="application/pdf" width="100%" height="900px">
-            <p>Seu navegador não suporta a visualização embutida. 
-            <a href="data:application/pdf;base64,{b64_pdf}" target="_blank">Clique aqui para visualizar o PDF</a>.</p>
-        </object>
-        """
-        st.markdown(html, unsafe_allow_html=True)
+        iframe_html = f'''
+        <iframe src="data:application/pdf;base64,{b64_pdf}" 
+                width="100%" 
+                height="900px" 
+                style="border: none;">
+        </iframe>
+        '''
+        components.html(iframe_html, height=900)
         pdf_file.seek(0)
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
@@ -96,10 +98,12 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     # Cria um canvas para compor a nova página de laudo
     packet = BytesIO()
     can = canvas.Canvas(packet, pagesize=A4)
+
     topo_info = altura_pagina - 6 * cm
     can.setFont("Helvetica-Bold", 12)
     can.drawString(margem_esquerda, topo_info, f"Nome: {nome_pdf}")
     can.drawRightString(largura_pagina - margem_direita, topo_info, f"Data do exame: {date_pdf}")
+
     topo_texto = topo_info - 1.7 * cm
     can.setFont("Helvetica-Bold", 14)
     can.drawString(margem_esquerda, topo_texto, titulo_laudo)
@@ -134,6 +138,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     style_ref.fontName = "Helvetica"
     style_ref.fontSize = 9
     style_ref.alignment = TA_JUSTIFY
+
     referencias = ("""
         <b>Referências</b><br/>
         Pereira CAC, Sato T, Rodrigues SC. Valores de referência para espirometria em brasileiros adultos de raça branca. 
@@ -158,7 +163,6 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     else:
         marca = None
 
-    # Mescla as páginas originais com a nova página de laudo
     for page in reader.pages:
         if marca:
             page.merge_page(marca)
@@ -173,7 +177,7 @@ def aba_laudar():
     st.title("📄 Laudos de Função Pulmonar")
     laudos = carregar_laudos()
     
-    # Upload do PDF; ao fazer upload, a pré-visualização é exibida automaticamente
+    # Upload do PDF; a visualização é feita automaticamente
     arquivo_pdf = st.file_uploader("Selecione o arquivo PDF", type="pdf")
     if arquivo_pdf:
         visualizar_pdf_simples(arquivo_pdf)
