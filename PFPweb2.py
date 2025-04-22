@@ -23,7 +23,7 @@ st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 # --------------------------------------------------------
 PASTA_PROJETO = os.path.dirname(__file__)  # Diretório onde o script está
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
-# Diretório de saída: Usa Desktop se existir; caso contrário, utiliza um diretório temporário.
+# Diretório de saída: Se houver uma pasta Desktop, utiliza; caso contrário, usa um diretório temporário
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 if os.path.isdir(desktop_path):
     CAMINHO_SAIDA = desktop_path
@@ -60,21 +60,18 @@ def salvar_laudos(laudos):
 
 def visualizar_pdf_streamlit(pdf_file):
     if pdf_file is not None:
-        pdf_file.seek(0)  # Reinicia o ponteiro
+        pdf_file.seek(0)  # Reinicia o ponteiro do arquivo
         base64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
-        # Usando a tag <object> para exibir o PDF
+        # Usando <iframe> para exibir o PDF. Alguns navegadores exibem PDFs inline dessa forma.
         pdf_viewer_html = f"""
             <html>
               <body style="margin: 0; padding: 0;">
-                <object data="data:application/pdf;base64,{base64_pdf}" type="application/pdf" width="700px" height="900px">
-                  <p>Seu navegador não suporta a visualização de PDF.
-                  <a href="data:application/pdf;base64,{base64_pdf}" download="arquivo.pdf">Baixe o PDF</a>.</p>
-                </object>
+                <iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="900px" frameborder="0"></iframe>
               </body>
             </html>
         """
         components.html(pdf_viewer_html, height=900)
-        pdf_file.seek(0)  # Reinicia para usos posteriores
+        pdf_file.seek(0)
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
     pdf_original.seek(0)
@@ -91,7 +88,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
         if parte:
             texto_pdf += parte + "\n"
 
-    # Caso queira depurar, descomente:
+    # Para debug: descomente a linha abaixo para verificar o texto extraído
     # st.write("Texto extraído do PDF:", texto_pdf)
 
     match_nome = re.search(r"Nome:\s*([^\n\r]+)", texto_pdf)
@@ -140,7 +137,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
         carimbo = ImageReader(caminho_carimbo)
         largura_carimbo = 3.4 * cm
         altura_carimbo = 2 * cm
-        pos_x = largura_pagina - largura_carimbo - 3 * cm  # desloca 1 cm para a esquerda
+        pos_x = largura_pagina - largura_carimbo - 3 * cm  # desloca para a esquerda
         pos_y = pos_texto_y - altura_carimbo - 0.3 * cm
         can.drawImage(carimbo, pos_x, pos_y, width=largura_carimbo, height=altura_carimbo, mask="auto")
 
@@ -166,7 +163,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     packet.seek(0)
     nova_pagina = PdfReader(packet).pages[0]
 
-    # Mescla a marca d'água, se existir
+    # Mescla a marca d'água, se disponível
     marca = PdfReader(CAMINHO_MARCA).pages[0] if os.path.exists(CAMINHO_MARCA) else None
     if marca:
         nova_pagina.merge_page(marca)
@@ -224,7 +221,8 @@ def aba_laudar():
             nome_medico=nome_medico,
             nome_arquivo_carimbo=arquivo_carimbo
         )
-        nome_arquivo = os.path.splitext(arquivo_pdf.name)[0] + "_report.pdf"
+        # Alteração: trocamos "report" por "assinado"
+        nome_arquivo = os.path.splitext(arquivo_pdf.name)[0] + "_assinado.pdf"
         caminho_final = os.path.join(CAMINHO_SAIDA, nome_arquivo)
         
         with open(caminho_final, "wb") as f:
