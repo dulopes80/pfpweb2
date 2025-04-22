@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import os
 import json
 import base64
@@ -24,10 +23,7 @@ st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 PASTA_PROJETO = os.path.dirname(__file__)
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-if os.path.isdir(desktop_path):
-    CAMINHO_SAIDA = desktop_path
-else:
-    CAMINHO_SAIDA = tempfile.gettempdir()
+CAMINHO_SAIDA = desktop_path if os.path.isdir(desktop_path) else tempfile.gettempdir()
 
 # Arquivos de carimbos e marca d'água
 CAMINHO_CARIMBOS = PASTA_PROJETO  
@@ -57,42 +53,23 @@ def salvar_laudos(laudos):
     with open(CAMINHO_LAUDOS, "w", encoding="utf-8") as f:
         json.dump(laudos, f, ensure_ascii=False, indent=2)
 
-def visualizar_pdf_seguro(pdf_file):
+def visualizar_pdf_simples(pdf_file):
     """
-    Converte automaticamente o PDF para base64 e gera 
-    um iframe que aponta para uma URL de dados. A meta tag
-    de Content-Security-Policy e a mensagem indicam que o 
-    arquivo é seguro, ajudando a evitar bloqueios pelo navegador.
+    Esta função converte automaticamente o PDF para base64
+    e insere-o em um <object> HTML para visualização na página.
+    Caso o navegador não suporte PDFs embutidos, é exibido um link para abrir o PDF em nova aba.
     """
     if pdf_file is not None:
         pdf_file.seek(0)
         pdf_bytes = pdf_file.read()
         b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-        
-        pdf_viewer_html = f"""
-        <html>
-          <head>
-            <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: https:;">
-            <style>
-              body {{
-                margin: 0;
-                padding: 0;
-              }}
-            </style>
-          </head>
-          <body>
-            <iframe src="data:application/pdf;base64,{b64_pdf}" 
-                    style="width: 100%; height: 900px;" 
-                    frameborder="0" 
-                    title="PDF Seguro para Visualização">
-            </iframe>
-            <div style="text-align: center; font-size: 0.9em; color: green; margin-top: 5px;">
-              Este PDF é seguro e autenticado.
-            </div>
-          </body>
-        </html>
+        html = f"""
+        <object data="data:application/pdf;base64,{b64_pdf}" type="application/pdf" width="100%" height="900px">
+            <p>Seu navegador não suporta a visualização embutida. 
+            <a href="data:application/pdf;base64,{b64_pdf}" target="_blank">Clique aqui para visualizar o PDF</a>.</p>
+        </object>
         """
-        components.html(pdf_viewer_html, height=900)
+        st.markdown(html, unsafe_allow_html=True)
         pdf_file.seek(0)
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
@@ -119,12 +96,10 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     # Cria um canvas para compor a nova página de laudo
     packet = BytesIO()
     can = canvas.Canvas(packet, pagesize=A4)
-
     topo_info = altura_pagina - 6 * cm
     can.setFont("Helvetica-Bold", 12)
     can.drawString(margem_esquerda, topo_info, f"Nome: {nome_pdf}")
     can.drawRightString(largura_pagina - margem_direita, topo_info, f"Data do exame: {date_pdf}")
-
     topo_texto = topo_info - 1.7 * cm
     can.setFont("Helvetica-Bold", 14)
     can.drawString(margem_esquerda, topo_texto, titulo_laudo)
@@ -159,7 +134,6 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     style_ref.fontName = "Helvetica"
     style_ref.fontSize = 9
     style_ref.alignment = TA_JUSTIFY
-
     referencias = ("""
         <b>Referências</b><br/>
         Pereira CAC, Sato T, Rodrigues SC. Valores de referência para espirometria em brasileiros adultos de raça branca. 
@@ -199,10 +173,10 @@ def aba_laudar():
     st.title("📄 Laudos de Função Pulmonar")
     laudos = carregar_laudos()
     
-    # Upload do PDF; ao fazer upload, é feita automaticamente a pré-visualização
+    # Upload do PDF; ao fazer upload, a pré-visualização é exibida automaticamente
     arquivo_pdf = st.file_uploader("Selecione o arquivo PDF", type="pdf")
     if arquivo_pdf:
-        visualizar_pdf_seguro(arquivo_pdf)
+        visualizar_pdf_simples(arquivo_pdf)
     
     st.markdown("### Selecione os textos que deseja incluir")
     selecionados = []
