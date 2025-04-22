@@ -23,7 +23,7 @@ st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 PASTA_PROJETO = os.path.dirname(__file__)
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-CAMINHO_SAIDA = desktop_path if os.path.isdir(desktop_path) else tempfile.gettempdir()
+CAMINHO_SAIDA_DEFAULT = desktop_path if os.path.isdir(desktop_path) else tempfile.gettempdir()
 
 # Arquivos de carimbos e marca d'água
 CAMINHO_CARIMBOS = PASTA_PROJETO
@@ -60,11 +60,11 @@ def visualizar_pdf(pdf_file):
     """
     if pdf_file is not None:
         pdf_bytes = pdf_file.read()
-        # Exibe o PDF inline na própria página (sem abrir nova janela)
         pdf_viewer(pdf_bytes)
         pdf_file.seek(0)
 
-def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
+def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados",
+                           nome_medico=None, nome_arquivo_carimbo=None):
     pdf_original.seek(0)
     reader = PdfReader(pdf_original)
     writer = PdfWriter()
@@ -81,19 +81,16 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
 
     match_nome = re.search(r"Nome:\s*([^\n\r]+)", texto_pdf)
     nome_pdf = match_nome.group(1).strip() if match_nome else "N/A"
-
     match_date = re.search(r"(?:Date do exame:|Data do exame:)\s*([^\n\r]{1,10})", texto_pdf)
     date_pdf = match_date.group(1).strip() if match_date else "N/A"
 
     # Cria um canvas para compor a nova página de laudo
     packet = BytesIO()
     can = canvas.Canvas(packet, pagesize=A4)
-
     topo_info = altura_pagina - 6 * cm
     can.setFont("Helvetica-Bold", 12)
     can.drawString(margem_esquerda, topo_info, f"Nome: {nome_pdf}")
     can.drawRightString(largura_pagina - margem_direita, topo_info, f"Data do exame: {date_pdf}")
-
     topo_texto = topo_info - 1.7 * cm
     can.setFont("Helvetica-Bold", 14)
     can.drawString(margem_esquerda, topo_texto, titulo_laudo)
@@ -157,7 +154,6 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
         if marca:
             page.merge_page(marca)
         writer.add_page(page)
-
     writer.add_page(nova_pagina)
     saida = BytesIO()
     writer.write(saida)
@@ -185,7 +181,9 @@ def aba_laudar():
         st.text_area("Texto do Laudo (Edite se necessário)", value=texto_final, height=200, key="laudo_editado")
 
     if arquivo_pdf:
-        caminho_pdf = os.path.join(CAMINHO_SAIDA, arquivo_pdf.name)
+        # Pergunta onde salvar o PDF no servidor
+        output_dir = st.text_input("Informe o diretório de saída (no servidor/local):", value=CAMINHO_SAIDA)
+        caminho_pdf = os.path.join(output_dir, arquivo_pdf.name)
         with open(caminho_pdf, "wb") as f:
             f.write(arquivo_pdf.getvalue())
 
@@ -206,7 +204,8 @@ def aba_laudar():
             nome_arquivo_carimbo=arquivo_carimbo
         )
         nome_arquivo = os.path.splitext(arquivo_pdf.name)[0] + "_assinado.pdf"
-        caminho_final = os.path.join(CAMINHO_SAIDA, nome_arquivo)
+        output_dir = st.text_input("Informe o diretório de saída (no servidor/local):", value=CAMINHO_SAIDA)  # Reutilize o input
+        caminho_final = os.path.join(output_dir, nome_arquivo)
 
         with open(caminho_final, "wb") as f:
             f.write(resultado.getbuffer())
