@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import os
 import json
 import base64
@@ -23,8 +24,7 @@ st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 PASTA_PROJETO = os.path.dirname(__file__)
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-CAMINHO_SAIDA = desktop_path if os.path.isdir(
-    desktop_path) else tempfile.gettempdir()
+CAMINHO_SAIDA = desktop_path if os.path.isdir(desktop_path) else tempfile.gettempdir()
 
 # Arquivos de carimbos e marca d'água
 CAMINHO_CARIMBOS = PASTA_PROJETO
@@ -40,8 +40,6 @@ DIC_CARIMBOS = {
 # --------------------------------------------------------
 # Funções auxiliares
 # --------------------------------------------------------
-
-
 def carregar_laudos():
     if not os.path.exists(CAMINHO_LAUDOS):
         return {}
@@ -52,31 +50,39 @@ def carregar_laudos():
         st.error(f"Erro ao carregar laudos: {e}")
         return {}
 
-
 def salvar_laudos(laudos):
     with open(CAMINHO_LAUDOS, "w", encoding="utf-8") as f:
         json.dump(laudos, f, ensure_ascii=False, indent=2)
 
-
-def visualizar_pdf_simples(pdf_file):
+def visualizar_pdf_blob(pdf_file):
     """
-    Esta função converte automaticamente o PDF para base64
-    e insere-o em um <object> HTML para visualização na página.
-    Caso o navegador não suporte PDFs embutidos, é exibido um link para abrir o PDF em nova aba.
+    Converte o PDF para base64, cria um Blob via JavaScript e atribui um blob URL
+    a um <iframe> embutido na página. Essa abordagem funciona em Chrome, Edge e Firefox,
+    permitindo que a visualização apareça na própria aba 'Laudar'.
     """
     if pdf_file is not None:
         pdf_file.seek(0)
         pdf_bytes = pdf_file.read()
         b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-        html = f"""
-        <object data="data:application/pdf;base64,{b64_pdf}" type="application/pdf" width="100%" height="900px">
-            <p>Seu navegador não suporta a visualização embutida. 
-            <a href="data:application/pdf;base64,{b64_pdf}" target="_blank">Clique aqui para visualizar o PDF</a>.</p>
-        </object>
+        html_blob = f"""
+        <iframe id="pdf-iframe" width="100%" height="900px" style="border: none;"></iframe>
+        <script>
+            (function() {{
+                var b64Pdf = "{b64_pdf}";
+                var binaryString = window.atob(b64Pdf);
+                var len = binaryString.length;
+                var bytes = new Uint8Array(len);
+                for (var i = 0; i < len; i++) {{
+                    bytes[i] = binaryString.charCodeAt(i);
+                }}
+                var blob = new Blob([bytes], {{type: "application/pdf"}});
+                var blobUrl = URL.createObjectURL(blob);
+                document.getElementById("pdf-iframe").src = blobUrl;
+            }})();
+        </script>
         """
-        st.markdown(html, unsafe_allow_html=True)
+        components.html(html_blob, height=900)
         pdf_file.seek(0)
-
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
     pdf_original.seek(0)
@@ -96,18 +102,18 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     match_nome = re.search(r"Nome:\s*([^\n\r]+)", texto_pdf)
     nome_pdf = match_nome.group(1).strip() if match_nome else "N/A"
 
-    match_date = re.search(
-        r"(?:Date do exame:|Data do exame:)\s*([^\n\r]{1,10})", texto_pdf)
+    match_date = re.search(r"(?:Date do exame:|Data do exame:)\s*([^\n\r]{1,10})", texto_pdf)
     date_pdf = match_date.group(1).strip() if match_date else "N/A"
 
     # Cria um canvas para compor a nova página de laudo
     packet = BytesIO()
     can = canvas.Canvas(packet, pagesize=A4)
+
     topo_info = altura_pagina - 6 * cm
     can.setFont("Helvetica-Bold", 12)
     can.drawString(margem_esquerda, topo_info, f"Nome: {nome_pdf}")
-    can.drawRightString(largura_pagina - margem_direita,
-                        topo_info, f"Data do exame: {date_pdf}")
+    can.drawRightString(largura_pagina - margem_direita, topo_info, f"Data do exame: {date_pdf}")
+
     topo_texto = topo_info - 1.7 * cm
     can.setFont("Helvetica-Bold", 14)
     can.drawString(margem_esquerda, topo_texto, titulo_laudo)
@@ -121,11 +127,9 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
 
     altura_texto = 10 * cm
     pos_texto_y = topo_texto - 1 * cm - altura_texto
-    paragrafo_laudo = Paragraph(
-        texto_laudo.replace("\n", "<br/>"), estilo_laudo)
+    paragrafo_laudo = Paragraph(texto_laudo.replace("\n", "<br/>"), estilo_laudo)
     largura_texto = largura_pagina - margem_esquerda - margem_direita
-    frame_texto = Frame(margem_esquerda, pos_texto_y,
-                        largura_texto, altura_texto, showBoundary=0)
+    frame_texto = Frame(margem_esquerda, pos_texto_y, largura_texto, altura_texto, showBoundary=0)
     frame_texto.addFromList([paragrafo_laudo], can)
 
     # Inserção do carimbo via BytesIO
@@ -180,15 +184,14 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     writer.write(saida)
     return saida
 
-
 def aba_laudar():
     st.title("📄 Laudos de Função Pulmonar")
     laudos = carregar_laudos()
 
-    # Upload do PDF; ao fazer upload, a pré-visualização é exibida automaticamente
+    # Upload do PDF; ao fazer upload, a pré-visualização é exibida na própria página
     arquivo_pdf = st.file_uploader("Selecione o arquivo PDF", type="pdf")
     if arquivo_pdf:
-        visualizar_pdf_simples(arquivo_pdf)
+        visualizar_pdf_blob(arquivo_pdf)
 
     st.markdown("### Selecione os textos que deseja incluir")
     selecionados = []
@@ -200,16 +203,14 @@ def aba_laudar():
 
     texto_final = "\n\n".join(selecionados)
     if texto_final:
-        st.text_area("Texto do Laudo (Edite se necessário)",
-                     value=texto_final, height=200, key="laudo_editado")
+        st.text_area("Texto do Laudo (Edite se necessário)", value=texto_final, height=200, key="laudo_editado")
 
     if arquivo_pdf:
         caminho_pdf = os.path.join(CAMINHO_SAIDA, arquivo_pdf.name)
         with open(caminho_pdf, "wb") as f:
             f.write(arquivo_pdf.getvalue())
 
-    nome_medico = st.sidebar.selectbox(
-        "Selecione o médico responsável", list(DIC_CARIMBOS.keys()))
+    nome_medico = st.sidebar.selectbox("Selecione o médico responsável", list(DIC_CARIMBOS.keys()))
 
     if st.button("Gerar PDF com Laudo"):
         if not arquivo_pdf or not texto_final:
@@ -239,13 +240,11 @@ def aba_laudar():
             mime="application/pdf"
         )
 
-
 def editar_laudos():
     st.subheader("📋 Editar Laudo")
     laudos = carregar_laudos()
     laudos_str = json.dumps(laudos, ensure_ascii=False, indent=2)
-    novo_conteudo = st.text_area(
-        "Conteúdo do JSON:", value=laudos_str, height=300)
+    novo_conteudo = st.text_area("Conteúdo do JSON:", value=laudos_str, height=300)
     if st.button("Salvar Alterações"):
         try:
             novo_json = json.loads(novo_conteudo)
@@ -253,7 +252,6 @@ def editar_laudos():
             st.success("Arquivo JSON atualizado com sucesso!")
         except Exception as e:
             st.error(f"Erro ao validar o JSON: {e}")
-
 
 # --------------------------------------------------------
 # Interface principal (menu lateral)
