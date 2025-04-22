@@ -12,6 +12,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.enums import TA_JUSTIFY
 import base64
 import re
+import tempfile  # Importa módulo para diretório temporário
 
 # Configure o Streamlit imediatamente após os imports!
 st.set_page_config(page_title="Sistema de Laudos", layout="centered")
@@ -19,7 +20,13 @@ st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 # Variáveis globais e caminhos
 PASTA_PROJETO = os.path.join(os.path.expanduser("~"), "Desktop", "Projeto1", "Projeto2")
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
-CAMINHO_SAIDA = os.path.join(os.path.expanduser("~"), "Desktop")
+# Define dinamicamente o CAMINHO_SAIDA: se a pasta Desktop existir, usa-a; caso contrário, usa o diretório temporário.
+desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+if os.path.isdir(desktop_path):
+    CAMINHO_SAIDA = desktop_path
+else:
+    CAMINHO_SAIDA = tempfile.gettempdir()
+
 CAMINHO_CARIMBOS = "C:\\Users\\Eduardo\\Desktop\\Teste\\PSG"
 CAMINHO_MARCA = os.path.join(CAMINHO_CARIMBOS, "marca2.pdf")
 
@@ -85,15 +92,15 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     packet = BytesIO()
     can = canvas.Canvas(packet, pagesize=A4)
     
-    # Inserir os campos na parte superior da nova página,
-    # com o "Nome:" à esquerda e "Data do exame:" à direita
+    # Inserir os campos na parte superior da nova página:
+    # "Nome:" à esquerda e "Data do exame:" à direita
     topo_info = altura_pagina - 6 * cm
     can.setFont("Helvetica-Bold", 12)
     can.drawString(margem_esquerda, topo_info, f"Nome: {nome_pdf}")
     can.drawRightString(largura_pagina - margem_direita, topo_info, f"Data do exame: {date_pdf}")
     
     # Insere o título do laudo logo abaixo, 0.5 cm mais abaixo
-    topo_texto = topo_info - 1.7 * cm  # Antes era 1.2 * cm, agora deslocado 0,5 cm a mais
+    topo_texto = topo_info - 1.7 * cm  # Antes era 1.2*cm; agora deslocado 0.5 cm a mais
     can.setFont("Helvetica-Bold", 14)
     can.drawString(margem_esquerda, topo_texto, titulo_laudo)
     
@@ -118,8 +125,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
         carimbo = ImageReader(caminho_carimbo)
         largura_carimbo = 3.4 * cm  # Largura definida para o carimbo
         altura_carimbo = 2 * cm
-        # O carimbo ficará 1 cm mais para a esquerda:
-        pos_x = largura_pagina - largura_carimbo - 3 * cm  
+        pos_x = largura_pagina - largura_carimbo - 3 * cm  # 1 cm a mais para a esquerda
         pos_y = pos_texto_y - altura_carimbo - 0.3 * cm  # Logo abaixo do laudo
         can.drawImage(carimbo, pos_x, pos_y, width=largura_carimbo, height=altura_carimbo, mask="auto")
     
@@ -185,6 +191,7 @@ def aba_laudar():
         st.text_area("Texto do Laudo (Edite se necessário)", value=texto_final, height=200, key="laudo_editado")
     
     if arquivo_pdf:
+        # Salva o arquivo carregado no diretório definido por CAMINHO_SAIDA
         caminho_pdf = os.path.join(CAMINHO_SAIDA, arquivo_pdf.name)
         with open(caminho_pdf, "wb") as f:
             f.write(arquivo_pdf.getvalue())
