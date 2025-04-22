@@ -55,41 +55,14 @@ def salvar_laudos(laudos):
         json.dump(laudos, f, ensure_ascii=False, indent=2)
 
 def visualizar_pdf_blob(pdf_file):
-    """
-    Converte o PDF para base64, cria um Blob via JavaScript,
-    e injeta um elemento de visualização na página.
-    
-    Se o navegador for Firefox, utiliza <embed>; caso contrário, utiliza <iframe>.
-    Dessa forma, a pré-visualização aparece inline na página.
-    """
     if pdf_file is not None:
         pdf_file.seek(0)
         pdf_bytes = pdf_file.read()
         b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-        html_blob = f"""
-        <div id="pdf-container"></div>
-        <script>
-          (function() {{
-              var b64Pdf = "{b64_pdf}";
-              var binaryString = window.atob(b64Pdf);
-              var len = binaryString.length;
-              var bytes = new Uint8Array(len);
-              for (var i = 0; i < len; i++) {{
-                  bytes[i] = binaryString.charCodeAt(i);
-              }}
-              var blob = new Blob([bytes], {{type: "application/pdf"}});
-              var blobUrl = URL.createObjectURL(blob);
-              // Detecta se o navegador é Firefox
-              var isFirefox = typeof InstallTrigger !== 'undefined';
-              if (isFirefox) {{
-                  document.getElementById("pdf-container").innerHTML = '<embed src="' + blobUrl + '" type="application/pdf" width="100%" height="900px" />';
-              }} else {{
-                  document.getElementById("pdf-container").innerHTML = '<iframe src="' + blobUrl + '" width="100%" height="900px" style="border: none;"></iframe>';
-              }}
-          }})();
-        </script>
-        """
-        components.html(html_blob, height=900)
+        pdf_display = f'''
+            <embed src="data:application/pdf;base64,{b64_pdf}" width="100%" height="900px" type="application/pdf">
+        '''
+        st.markdown(pdf_display, unsafe_allow_html=True)
         pdf_file.seek(0)
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
