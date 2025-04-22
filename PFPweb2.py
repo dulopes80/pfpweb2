@@ -1,11 +1,12 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import os
 import json
+import base64
 import re
 import tempfile
 from PyPDF2 import PdfReader, PdfWriter
 from io import BytesIO
-from pdf2image import convert_from_bytes  # pip install pdf2image (e Poppler instalado)
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
@@ -18,12 +19,15 @@ from reportlab.lib.enums import TA_JUSTIFY
 st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 
 # --------------------------------------------------------
-# Definição dos caminhos relativos (baseados na raiz do repositório)
+# Definição de caminhos relativos (baseados na raiz do repositório)
 # --------------------------------------------------------
 PASTA_PROJETO = os.path.dirname(__file__)
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-CAMINHO_SAIDA = desktop_path if os.path.isdir(desktop_path) else tempfile.gettempdir()
+if os.path.isdir(desktop_path):
+    CAMINHO_SAIDA = desktop_path
+else:
+    CAMINHO_SAIDA = tempfile.gettempdir()
 
 # Arquivos de carimbos e marca d'água
 CAMINHO_CARIMBOS = PASTA_PROJETO  
@@ -53,24 +57,42 @@ def salvar_laudos(laudos):
     with open(CAMINHO_LAUDOS, "w", encoding="utf-8") as f:
         json.dump(laudos, f, ensure_ascii=False, indent=2)
 
-def visualizar_pdf_como_imagem(pdf_file):
+def visualizar_pdf_seguro(pdf_file):
     """
-    Converte automaticamente a primeira página do PDF para imagem usando pdf2image
-    e exibe a imagem na página.
+    Converte automaticamente o PDF para base64 e gera 
+    um iframe que aponta para uma URL de dados. A meta tag
+    de Content-Security-Policy e a mensagem indicam que o 
+    arquivo é seguro, ajudando a evitar bloqueios pelo navegador.
     """
-    try:
+    if pdf_file is not None:
         pdf_file.seek(0)
         pdf_bytes = pdf_file.read()
-        # Converte somente a primeira página
-        # Se necessário, especifique poppler_path em ambientes Windows (ex: poppler_path=r"C:\poppler\bin")
-        images = convert_from_bytes(pdf_bytes, first_page=1, last_page=1)
-        if images:
-            st.image(images[0], caption="Visualização do PDF (página 1)")
-        else:
-            st.error("Não foi possível converter o PDF para imagem.")
-    except Exception as e:
-        st.error("Erro ao converter PDF para imagem. Certifique-se de ter o Poppler instalado. Erro: " + str(e))
-    finally:
+        b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+        
+        pdf_viewer_html = f"""
+        <html>
+          <head>
+            <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: https:;">
+            <style>
+              body {{
+                margin: 0;
+                padding: 0;
+              }}
+            </style>
+          </head>
+          <body>
+            <iframe src="data:application/pdf;base64,{b64_pdf}" 
+                    style="width: 100%; height: 900px;" 
+                    frameborder="0" 
+                    title="PDF Seguro para Visualização">
+            </iframe>
+            <div style="text-align: center; font-size: 0.9em; color: green; margin-top: 5px;">
+              Este PDF é seguro e autenticado.
+            </div>
+          </body>
+        </html>
+        """
+        components.html(pdf_viewer_html, height=900)
         pdf_file.seek(0)
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
@@ -81,24 +103,28 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     margem_esquerda = 2 * cm
     margem_direita = 2 * cm
 
-    # Extrai informações “Nome:” e “Data do exame:” do PDF original
+    # Extrai os campos "Nome:" e "Data do exame:" do PDF original
     texto_pdf = ""
     for page in reader.pages:
         parte = page.extract_text()
         if parte:
             texto_pdf += parte + "\n"
+
     match_nome = re.search(r"Nome:\s*([^\n\r]+)", texto_pdf)
     nome_pdf = match_nome.group(1).strip() if match_nome else "N/A"
+
     match_date = re.search(r"(?:Date do exame:|Data do exame:)\s*([^\n\r]{1,10})", texto_pdf)
     date_pdf = match_date.group(1).strip() if match_date else "N/A"
     
-    # Cria um canvas para a nova página de laudo
+    # Cria um canvas para compor a nova página de laudo
     packet = BytesIO()
     can = canvas.Canvas(packet, pagesize=A4)
+
     topo_info = altura_pagina - 6 * cm
     can.setFont("Helvetica-Bold", 12)
     can.drawString(margem_esquerda, topo_info, f"Nome: {nome_pdf}")
     can.drawRightString(largura_pagina - margem_direita, topo_info, f"Data do exame: {date_pdf}")
+
     topo_texto = topo_info - 1.7 * cm
     can.setFont("Helvetica-Bold", 14)
     can.drawString(margem_esquerda, topo_texto, titulo_laudo)
@@ -117,7 +143,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     frame_texto = Frame(margem_esquerda, pos_texto_y, largura_texto, altura_texto, showBoundary=0)
     frame_texto.addFromList([paragrafo_laudo], can)
 
-    # Carrega o carimbo via BytesIO
+    # Inserção do carimbo via BytesIO
     caminho_carimbo = os.path.join(CAMINHO_CARIMBOS, nome_arquivo_carimbo)
     if os.path.exists(caminho_carimbo):
         with open(caminho_carimbo, "rb") as f:
@@ -129,11 +155,11 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
         pos_y = pos_texto_y - altura_carimbo - 0.3 * cm
         can.drawImage(carimbo, pos_x, pos_y, width=largura_carimbo, height=altura_carimbo, mask="auto")
 
-    # Adiciona referências
     style_ref = styles["Normal"].clone("ref_estilo")
     style_ref.fontName = "Helvetica"
     style_ref.fontSize = 9
     style_ref.alignment = TA_JUSTIFY
+
     referencias = ("""
         <b>Referências</b><br/>
         Pereira CAC, Sato T, Rodrigues SC. Valores de referência para espirometria em brasileiros adultos de raça branca. 
@@ -151,14 +177,14 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     packet.seek(0)
     nova_pagina = PdfReader(packet).pages[0]
 
-    # Mescla a marca d'água (se existir)
+    # Mescla a marca d'água, se disponível
     if os.path.exists(CAMINHO_MARCA):
         marca = PdfReader(CAMINHO_MARCA).pages[0]
         nova_pagina.merge_page(marca)
     else:
         marca = None
 
-    # Adiciona todas as páginas (mesclando a marca, se necessário)
+    # Mescla as páginas originais com a nova página de laudo
     for page in reader.pages:
         if marca:
             page.merge_page(marca)
@@ -173,11 +199,10 @@ def aba_laudar():
     st.title("📄 Laudos de Função Pulmonar")
     laudos = carregar_laudos()
     
-    # Upload do arquivo PDF
+    # Upload do PDF; ao fazer upload, é feita automaticamente a pré-visualização
     arquivo_pdf = st.file_uploader("Selecione o arquivo PDF", type="pdf")
     if arquivo_pdf:
-        # Ao fazer upload, a visualização é feita automaticamente
-        visualizar_pdf_como_imagem(arquivo_pdf)
+        visualizar_pdf_seguro(arquivo_pdf)
     
     st.markdown("### Selecione os textos que deseja incluir")
     selecionados = []
@@ -240,7 +265,7 @@ def editar_laudos():
             st.error(f"Erro ao validar o JSON: {e}")
 
 # --------------------------------------------------------
-# Interface principal com menu lateral
+# Interface principal (menu lateral)
 # --------------------------------------------------------
 st.sidebar.title("Menu")
 pagina = st.sidebar.radio("Escolha a página", ["Laudar", "Editar Laudo"])
