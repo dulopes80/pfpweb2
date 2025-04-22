@@ -21,16 +21,16 @@ st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 # --------------------------------------------------------
 # Definição de caminhos relativos (baseados na raiz do repositório)
 # --------------------------------------------------------
-PASTA_PROJETO = os.path.dirname(__file__)  # Diretório onde o script está
+PASTA_PROJETO = os.path.dirname(__file__)  # Diretório onde este script está
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
-# Diretório de saída: Se houver uma pasta Desktop, utiliza; caso contrário, usa um diretório temporário
+# Diretório de saída: se houver uma pasta Desktop, utiliza-a; caso contrário, utiliza um diretório temporário
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 if os.path.isdir(desktop_path):
     CAMINHO_SAIDA = desktop_path
 else:
     CAMINHO_SAIDA = tempfile.gettempdir()
 
-# Os arquivos dos carimbos e da marca d'água estão na raiz do repositório
+# Os arquivos de carimbos e da marca d'água devem estar na raiz do repositório (junto com este script)
 CAMINHO_CARIMBOS = PASTA_PROJETO  
 CAMINHO_MARCA = os.path.join(PASTA_PROJETO, "marca2.pdf")
 
@@ -62,7 +62,7 @@ def visualizar_pdf_streamlit(pdf_file):
     if pdf_file is not None:
         pdf_file.seek(0)  # Reinicia o ponteiro do arquivo
         base64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
-        # Usando <iframe> para exibir o PDF. Alguns navegadores exibem PDFs inline dessa forma.
+        # Utilizando <iframe> para exibir o PDF; ajuste o tamanho conforme necessário.
         pdf_viewer_html = f"""
             <html>
               <body style="margin: 0; padding: 0;">
@@ -88,7 +88,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
         if parte:
             texto_pdf += parte + "\n"
 
-    # Para debug: descomente a linha abaixo para verificar o texto extraído
+    # Para depuração, descomente a linha abaixo:
     # st.write("Texto extraído do PDF:", texto_pdf)
 
     match_nome = re.search(r"Nome:\s*([^\n\r]+)", texto_pdf)
@@ -112,7 +112,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     can.drawString(margem_esquerda, topo_info, f"Nome: {nome_pdf}")
     can.drawRightString(largura_pagina - margem_direita, topo_info, f"Data do exame: {date_pdf}")
 
-    # Coloca o título do laudo 0,5 cm mais abaixo
+    # Coloca o título 0,5 cm mais abaixo
     topo_texto = topo_info - 1.7 * cm
     can.setFont("Helvetica-Bold", 14)
     can.drawString(margem_esquerda, topo_texto, titulo_laudo)
@@ -131,13 +131,13 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     frame_texto = Frame(margem_esquerda, pos_texto_y, largura_texto, altura_texto, showBoundary=0)
     frame_texto.addFromList([paragrafo_laudo], can)
 
-    # Inserção do carimbo (imagem)
+    # Inserção do carimbo
     caminho_carimbo = os.path.join(CAMINHO_CARIMBOS, nome_arquivo_carimbo)
     if os.path.exists(caminho_carimbo):
         carimbo = ImageReader(caminho_carimbo)
         largura_carimbo = 3.4 * cm
         altura_carimbo = 2 * cm
-        pos_x = largura_pagina - largura_carimbo - 3 * cm  # desloca para a esquerda
+        pos_x = largura_pagina - largura_carimbo - 3 * cm
         pos_y = pos_texto_y - altura_carimbo - 0.3 * cm
         can.drawImage(carimbo, pos_x, pos_y, width=largura_carimbo, height=altura_carimbo, mask="auto")
 
@@ -168,7 +168,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     if marca:
         nova_pagina.merge_page(marca)
 
-    # Mescla as páginas do PDF original com a nova página de laudo
+    # Mescla as páginas originais com a nova página de laudo
     for page in reader.pages:
         if marca:
             page.merge_page(marca)
@@ -221,7 +221,7 @@ def aba_laudar():
             nome_medico=nome_medico,
             nome_arquivo_carimbo=arquivo_carimbo
         )
-        # Alteração: trocamos "report" por "assinado"
+        # Renomeia substituindo "report" por "assinado"
         nome_arquivo = os.path.splitext(arquivo_pdf.name)[0] + "_assinado.pdf"
         caminho_final = os.path.join(CAMINHO_SAIDA, nome_arquivo)
         
