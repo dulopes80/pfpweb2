@@ -164,7 +164,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     return saida
 
 def aba_laudar():
-    st.title("📄 Laudos de Função Pulmonar")
+    st.title("📄 Laudos de Função Pulmonar Pulmoclinica")
     laudos = carregar_laudos()
     
     arquivo_pdf = st.file_uploader("Selecione o arquivo PDF", type="pdf")
