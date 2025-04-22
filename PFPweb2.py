@@ -18,16 +18,16 @@ from reportlab.lib.enums import TA_JUSTIFY
 # Configuração do Streamlit
 st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 
-# --------------------------------------------------------
-# Definição de caminhos relativos (baseados na raiz do repositório)
-# --------------------------------------------------------
+# -----------------------------------------------------------------------
+# Caminhos relativos (baseados na raiz do repositório)
+# -----------------------------------------------------------------------
 PASTA_PROJETO = os.path.dirname(__file__)
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 CAMINHO_SAIDA = desktop_path if os.path.isdir(desktop_path) else tempfile.gettempdir()
 
 # Arquivos de carimbos e marca d'água
-CAMINHO_CARIMBOS = PASTA_PROJETO
+CAMINHO_CARIMBOS = PASTA_PROJETO  
 CAMINHO_MARCA = os.path.join(PASTA_PROJETO, "marca2.pdf")
 
 DIC_CARIMBOS = {
@@ -37,9 +37,9 @@ DIC_CARIMBOS = {
     "Dr. Rogério": "carimborogerio.jpg"
 }
 
-# --------------------------------------------------------
+# -----------------------------------------------------------------------
 # Funções auxiliares
-# --------------------------------------------------------
+# -----------------------------------------------------------------------
 def carregar_laudos():
     if not os.path.exists(CAMINHO_LAUDOS):
         return {}
@@ -54,24 +54,36 @@ def salvar_laudos(laudos):
     with open(CAMINHO_LAUDOS, "w", encoding="utf-8") as f:
         json.dump(laudos, f, ensure_ascii=False, indent=2)
 
-def visualizar_pdf_simples(pdf_file):
+def visualizar_pdf_blob(pdf_file):
     """
-    Lê o PDF, converte-o para base64 e monta um iframe simples
-    para exibir o PDF na página. Essa abordagem não tem fallback,
-    então se o navegador suportar a visualização, o PDF será mostrado.
+    Lê o PDF, converte-o para base64 e, em seguida, utiliza JavaScript para
+    transformar os dados em um Blob. Um blob URL é então criado e atribuído
+    a um <iframe> para exibição. Essa abordagem funciona adequadamente no Chrome,
+    Edge e Firefox.
     """
     if pdf_file is not None:
+        # Reinicia o ponteiro e realiza a leitura dos bytes
         pdf_file.seek(0)
         pdf_bytes = pdf_file.read()
         b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-        iframe_html = f'''
-        <iframe src="data:application/pdf;base64,{b64_pdf}" 
-                width="100%" 
-                height="900px" 
-                style="border: none;">
-        </iframe>
-        '''
-        components.html(iframe_html, height=900)
+        html_blob = f"""
+        <iframe id="pdf-iframe" width="100%" height="900px" style="border: none;"></iframe>
+        <script>
+          (function() {{
+              var b64Pdf = "{b64_pdf}";
+              var binaryString = window.atob(b64Pdf);
+              var len = binaryString.length;
+              var bytes = new Uint8Array(len);
+              for (var i = 0; i < len; i++) {{
+                  bytes[i] = binaryString.charCodeAt(i);
+              }}
+              var blob = new Blob([bytes], {{type: "application/pdf"}});
+              var blobUrl = URL.createObjectURL(blob);
+              document.getElementById("pdf-iframe").src = blobUrl;
+          }})();
+        </script>
+        """
+        components.html(html_blob, height=900)
         pdf_file.seek(0)
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
@@ -82,7 +94,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     margem_esquerda = 2 * cm
     margem_direita = 2 * cm
 
-    # Extrai os campos "Nome:" e "Data do exame:" do PDF original
+    # Extrai informações do PDF original (por exemplo, Nome e Data)
     texto_pdf = ""
     for page in reader.pages:
         parte = page.extract_text()
@@ -122,7 +134,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     frame_texto = Frame(margem_esquerda, pos_texto_y, largura_texto, altura_texto, showBoundary=0)
     frame_texto.addFromList([paragrafo_laudo], can)
 
-    # Inserção do carimbo via BytesIO
+    # Inserção do carimbo usando BytesIO
     caminho_carimbo = os.path.join(CAMINHO_CARIMBOS, nome_arquivo_carimbo)
     if os.path.exists(caminho_carimbo):
         with open(caminho_carimbo, "rb") as f:
@@ -156,7 +168,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     packet.seek(0)
     nova_pagina = PdfReader(packet).pages[0]
 
-    # Mescla a marca d'água, se disponível
+    # Mescla a marca d'água (se existir)
     if os.path.exists(CAMINHO_MARCA):
         marca = PdfReader(CAMINHO_MARCA).pages[0]
         nova_pagina.merge_page(marca)
@@ -177,10 +189,10 @@ def aba_laudar():
     st.title("📄 Laudos de Função Pulmonar")
     laudos = carregar_laudos()
     
-    # Upload do PDF; a visualização é feita automaticamente
+    # Upload do PDF; ao fazer o upload, a pré-visualização é feita automaticamente via Blob
     arquivo_pdf = st.file_uploader("Selecione o arquivo PDF", type="pdf")
     if arquivo_pdf:
-        visualizar_pdf_simples(arquivo_pdf)
+        visualizar_pdf_blob(arquivo_pdf)
     
     st.markdown("### Selecione os textos que deseja incluir")
     selecionados = []
@@ -242,9 +254,9 @@ def editar_laudos():
         except Exception as e:
             st.error(f"Erro ao validar o JSON: {e}")
 
-# --------------------------------------------------------
-# Interface principal (menu lateral)
-# --------------------------------------------------------
+# -----------------------------------------------------------------------
+# Interface Principal (Menu Lateral)
+# -----------------------------------------------------------------------
 st.sidebar.title("Menu")
 pagina = st.sidebar.radio("Escolha a página", ["Laudar", "Editar Laudo"])
 
