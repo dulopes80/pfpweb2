@@ -1,8 +1,6 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import os
 import json
-import base64
 import re
 import tempfile
 from PyPDF2 import PdfReader, PdfWriter
@@ -14,6 +12,7 @@ from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Paragraph, Frame
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.enums import TA_JUSTIFY
+from streamlit_pdf_viewer import pdf_viewer  # Biblioteca para exibir PDF inline
 
 # Configuração do Streamlit
 st.set_page_config(page_title="Sistema de Laudos", layout="centered")
@@ -54,15 +53,15 @@ def salvar_laudos(laudos):
     with open(CAMINHO_LAUDOS, "w", encoding="utf-8") as f:
         json.dump(laudos, f, ensure_ascii=False, indent=2)
 
-def visualizar_pdf_blob(pdf_file):
+def visualizar_pdf(pdf_file):
+    """
+    Utiliza o streamlit-pdf-viewer para exibir o PDF inline na página.
+    Essa função lê os bytes do PDF e os passa para o pdf_viewer.
+    """
     if pdf_file is not None:
-        pdf_file.seek(0)
         pdf_bytes = pdf_file.read()
-        b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-        pdf_display = f'''
-            <embed src="data:application/pdf;base64,{b64_pdf}" width="100%" height="900px" type="application/pdf">
-        '''
-        st.markdown(pdf_display, unsafe_allow_html=True)
+        # Exibe o PDF inline na própria página (sem abrir nova janela)
+        pdf_viewer(pdf_bytes)
         pdf_file.seek(0)
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
@@ -83,8 +82,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     match_nome = re.search(r"Nome:\s*([^\n\r]+)", texto_pdf)
     nome_pdf = match_nome.group(1).strip() if match_nome else "N/A"
 
-    match_date = re.search(
-        r"(?:Date do exame:|Data do exame:)\s*([^\n\r]{1,10})", texto_pdf)
+    match_date = re.search(r"(?:Date do exame:|Data do exame:)\s*([^\n\r]{1,10})", texto_pdf)
     date_pdf = match_date.group(1).strip() if match_date else "N/A"
 
     # Cria um canvas para compor a nova página de laudo
@@ -94,8 +92,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     topo_info = altura_pagina - 6 * cm
     can.setFont("Helvetica-Bold", 12)
     can.drawString(margem_esquerda, topo_info, f"Nome: {nome_pdf}")
-    can.drawRightString(largura_pagina - margem_direita,
-                        topo_info, f"Data do exame: {date_pdf}")
+    can.drawRightString(largura_pagina - margem_direita, topo_info, f"Data do exame: {date_pdf}")
 
     topo_texto = topo_info - 1.7 * cm
     can.setFont("Helvetica-Bold", 14)
@@ -125,8 +122,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
         altura_carimbo = 2 * cm
         pos_x = largura_pagina - largura_carimbo - 3 * cm
         pos_y = pos_texto_y - altura_carimbo - 0.3 * cm
-        can.drawImage(carimbo, pos_x, pos_y, width=largura_carimbo,
-                      height=altura_carimbo, mask="auto")
+        can.drawImage(carimbo, pos_x, pos_y, width=largura_carimbo, height=altura_carimbo, mask="auto")
 
     style_ref = styles["Normal"].clone("ref_estilo")
     style_ref.fontName = "Helvetica"
@@ -171,10 +167,10 @@ def aba_laudar():
     st.title("📄 Laudos de Função Pulmonar")
     laudos = carregar_laudos()
 
-    # Upload do PDF; ao fazer upload, a pré-visualização é exibida na própria página
+    # Upload do PDF; a pré-visualização é exibida inline, usando streamlit-pdf-viewer
     arquivo_pdf = st.file_uploader("Selecione o arquivo PDF", type="pdf")
     if arquivo_pdf:
-        visualizar_pdf_blob(arquivo_pdf)
+        visualizar_pdf(arquivo_pdf)
 
     st.markdown("### Selecione os textos que deseja incluir")
     selecionados = []

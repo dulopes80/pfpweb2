@@ -2,3 +2,4 @@ fitz==0.0.1.dev2
 PyPDF2==3.0.1
 reportlab==4.3.1
 streamlit==1.44.1
+streamlit-pdf-viewer
