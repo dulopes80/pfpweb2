@@ -15,23 +15,23 @@ from reportlab.platypus import Paragraph, Frame
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.enums import TA_JUSTIFY
 
-# Configura o Streamlit
+# Configuração do Streamlit
 st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 
-# ---------------------------
+# --------------------------------------------------------
 # Definição de caminhos relativos (baseados na raiz do repositório)
-# ---------------------------
-PASTA_PROJETO = os.path.dirname(__file__)  # diretorio onde este script está
+# --------------------------------------------------------
+PASTA_PROJETO = os.path.dirname(__file__)  # Diretório onde o script está
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
-# Diretório de saída: se houver uma pasta Desktop, usar; caso contrário, diretório temporário
+# Diretório de saída: Usa Desktop se existir; caso contrário, utiliza um diretório temporário.
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 if os.path.isdir(desktop_path):
     CAMINHO_SAIDA = desktop_path
 else:
     CAMINHO_SAIDA = tempfile.gettempdir()
 
-# Os arquivos dos carimbos e a marca d'água estão na raiz do repositório
-CAMINHO_CARIMBOS = PASTA_PROJETO
+# Os arquivos dos carimbos e da marca d'água estão na raiz do repositório
+CAMINHO_CARIMBOS = PASTA_PROJETO  
 CAMINHO_MARCA = os.path.join(PASTA_PROJETO, "marca2.pdf")
 
 DIC_CARIMBOS = {
@@ -41,9 +41,9 @@ DIC_CARIMBOS = {
     "Dr. Rogério": "carimborogerio.jpg"
 }
 
-# ---------------------------
+# --------------------------------------------------------
 # Funções auxiliares
-# ---------------------------
+# --------------------------------------------------------
 def carregar_laudos():
     if not os.path.exists(CAMINHO_LAUDOS):
         return {}
@@ -60,17 +60,21 @@ def salvar_laudos(laudos):
 
 def visualizar_pdf_streamlit(pdf_file):
     if pdf_file is not None:
-        pdf_file.seek(0)  # Reinicia o ponteiro do arquivo
+        pdf_file.seek(0)  # Reinicia o ponteiro
         base64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
+        # Usando a tag <object> para exibir o PDF
         pdf_viewer_html = f"""
             <html>
               <body style="margin: 0; padding: 0;">
-                <embed src="data:application/pdf;base64,{base64_pdf}" type="application/pdf" width="100%" height="900px" />
+                <object data="data:application/pdf;base64,{base64_pdf}" type="application/pdf" width="700px" height="900px">
+                  <p>Seu navegador não suporta a visualização de PDF.
+                  <a href="data:application/pdf;base64,{base64_pdf}" download="arquivo.pdf">Baixe o PDF</a>.</p>
+                </object>
               </body>
             </html>
         """
         components.html(pdf_viewer_html, height=900)
-        pdf_file.seek(0)  # Reinicia novamente para uso posterior
+        pdf_file.seek(0)  # Reinicia para usos posteriores
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
     pdf_original.seek(0)
@@ -87,7 +91,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
         if parte:
             texto_pdf += parte + "\n"
 
-    # Se necessário, para debug, descomente a linha abaixo:
+    # Caso queira depurar, descomente:
     # st.write("Texto extraído do PDF:", texto_pdf)
 
     match_nome = re.search(r"Nome:\s*([^\n\r]+)", texto_pdf)
@@ -111,7 +115,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     can.drawString(margem_esquerda, topo_info, f"Nome: {nome_pdf}")
     can.drawRightString(largura_pagina - margem_direita, topo_info, f"Data do exame: {date_pdf}")
 
-    # Título do laudo (deslocado 0.5 cm mais abaixo)
+    # Coloca o título do laudo 0,5 cm mais abaixo
     topo_texto = topo_info - 1.7 * cm
     can.setFont("Helvetica-Bold", 14)
     can.drawString(margem_esquerda, topo_texto, titulo_laudo)
@@ -130,13 +134,13 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     frame_texto = Frame(margem_esquerda, pos_texto_y, largura_texto, altura_texto, showBoundary=0)
     frame_texto.addFromList([paragrafo_laudo], can)
 
-    # Inserção do carimbo
+    # Inserção do carimbo (imagem)
     caminho_carimbo = os.path.join(CAMINHO_CARIMBOS, nome_arquivo_carimbo)
     if os.path.exists(caminho_carimbo):
         carimbo = ImageReader(caminho_carimbo)
         largura_carimbo = 3.4 * cm
         altura_carimbo = 2 * cm
-        pos_x = largura_pagina - largura_carimbo - 3 * cm
+        pos_x = largura_pagina - largura_carimbo - 3 * cm  # desloca 1 cm para a esquerda
         pos_y = pos_texto_y - altura_carimbo - 0.3 * cm
         can.drawImage(carimbo, pos_x, pos_y, width=largura_carimbo, height=altura_carimbo, mask="auto")
 
@@ -167,7 +171,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     if marca:
         nova_pagina.merge_page(marca)
 
-    # Mescla as páginas originais com a nova página de laudo
+    # Mescla as páginas do PDF original com a nova página de laudo
     for page in reader.pages:
         if marca:
             page.merge_page(marca)
