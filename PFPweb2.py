@@ -1,12 +1,11 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import os
 import json
-import base64
 import re
 import tempfile
 from PyPDF2 import PdfReader, PdfWriter
 from io import BytesIO
+from pdf2image import convert_from_bytes  # Necessário: pip install pdf2image e Poppler instalado
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
@@ -21,7 +20,7 @@ st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 # --------------------------------------------------------
 # Definição de caminhos relativos (baseados na raiz do repositório)
 # --------------------------------------------------------
-PASTA_PROJETO = os.path.dirname(__file__)  # Diretório onde este script está
+PASTA_PROJETO = os.path.dirname(__file__)  # Diretório onde o script está
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 if os.path.isdir(desktop_path):
@@ -57,24 +56,23 @@ def salvar_laudos(laudos):
     with open(CAMINHO_LAUDOS, "w", encoding="utf-8") as f:
         json.dump(laudos, f, ensure_ascii=False, indent=2)
 
-def visualizar_pdf_nova_janela(pdf_file):
+def visualizar_pdf_como_imagem(pdf_file):
     """
-    Gera um link que, ao ser clicado, abre o PDF em uma nova aba.
-    Utilizamos uma URL em base64 para que o navegador abra o arquivo.
+    Converte o PDF para imagem (apenas a primeira página) usando pdf2image
+    e exibe diretamente na página.
     """
-    if pdf_file is not None:
+    try:
         pdf_file.seek(0)
         pdf_bytes = pdf_file.read()
-        b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-        # Cria um link com target="_blank" para abrir numa nova aba
-        link_html = f'''
-        <div style="text-align: center; margin-bottom: 1rem;">
-          <a href="data:application/pdf;base64,{b64_pdf}" target="_blank" style="font-size: 18px; text-decoration: underline;">
-            Clique aqui para visualizar o PDF em nova janela
-          </a>
-        </div>
-        '''
-        st.markdown(link_html, unsafe_allow_html=True)
+        # Converte a primeira página do PDF em uma imagem Pillow
+        images = convert_from_bytes(pdf_bytes, first_page=1, last_page=1)
+        if images:
+            st.image(images[0], caption="Visualização do PDF (página 1)")
+        else:
+            st.error("Não foi possível converter o PDF para imagem.")
+    except Exception as e:
+        st.error("Erro ao converter PDF para imagem. Certifique-se de ter o Poppler instalado. Erro: " + str(e))
+    finally:
         pdf_file.seek(0)
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
@@ -184,8 +182,7 @@ def aba_laudar():
     
     arquivo_pdf = st.file_uploader("Selecione o arquivo PDF", type="pdf")
     if arquivo_pdf:
-        # Chama a função que gera o link para abrir o PDF em nova janela.
-        visualizar_pdf_nova_janela(arquivo_pdf)
+        visualizar_pdf_como_imagem(arquivo_pdf)
     
     st.markdown("### Selecione os textos que deseja incluir")
     selecionados = []
