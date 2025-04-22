@@ -56,29 +56,37 @@ def salvar_laudos(laudos):
 
 def visualizar_pdf_blob(pdf_file):
     """
-    Converte o PDF para base64, cria um Blob via JavaScript e atribui um blob URL
-    a um <iframe> embutido na página. Essa abordagem funciona em Chrome, Edge e Firefox,
-    permitindo que a visualização apareça na própria aba 'Laudar'.
+    Converte o PDF para base64, cria um Blob via JavaScript,
+    e injeta um elemento de visualização na página.
+    
+    Se o navegador for Firefox, utiliza <embed>; caso contrário, utiliza <iframe>.
+    Dessa forma, a pré-visualização aparece inline na página.
     """
     if pdf_file is not None:
         pdf_file.seek(0)
         pdf_bytes = pdf_file.read()
         b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
         html_blob = f"""
-        <iframe id="pdf-iframe" width="100%" height="900px" style="border: none;"></iframe>
+        <div id="pdf-container"></div>
         <script>
-            (function() {{
-                var b64Pdf = "{b64_pdf}";
-                var binaryString = window.atob(b64Pdf);
-                var len = binaryString.length;
-                var bytes = new Uint8Array(len);
-                for (var i = 0; i < len; i++) {{
-                    bytes[i] = binaryString.charCodeAt(i);
-                }}
-                var blob = new Blob([bytes], {{type: "application/pdf"}});
-                var blobUrl = URL.createObjectURL(blob);
-                document.getElementById("pdf-iframe").src = blobUrl;
-            }})();
+          (function() {{
+              var b64Pdf = "{b64_pdf}";
+              var binaryString = window.atob(b64Pdf);
+              var len = binaryString.length;
+              var bytes = new Uint8Array(len);
+              for (var i = 0; i < len; i++) {{
+                  bytes[i] = binaryString.charCodeAt(i);
+              }}
+              var blob = new Blob([bytes], {{type: "application/pdf"}});
+              var blobUrl = URL.createObjectURL(blob);
+              // Detecta se o navegador é Firefox
+              var isFirefox = typeof InstallTrigger !== 'undefined';
+              if (isFirefox) {{
+                  document.getElementById("pdf-container").innerHTML = '<embed src="' + blobUrl + '" type="application/pdf" width="100%" height="900px" />';
+              }} else {{
+                  document.getElementById("pdf-container").innerHTML = '<iframe src="' + blobUrl + '" width="100%" height="900px" style="border: none;"></iframe>';
+              }}
+          }})();
         </script>
         """
         components.html(html_blob, height=900)
@@ -102,7 +110,8 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     match_nome = re.search(r"Nome:\s*([^\n\r]+)", texto_pdf)
     nome_pdf = match_nome.group(1).strip() if match_nome else "N/A"
 
-    match_date = re.search(r"(?:Date do exame:|Data do exame:)\s*([^\n\r]{1,10})", texto_pdf)
+    match_date = re.search(
+        r"(?:Date do exame:|Data do exame:)\s*([^\n\r]{1,10})", texto_pdf)
     date_pdf = match_date.group(1).strip() if match_date else "N/A"
 
     # Cria um canvas para compor a nova página de laudo
@@ -112,7 +121,8 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     topo_info = altura_pagina - 6 * cm
     can.setFont("Helvetica-Bold", 12)
     can.drawString(margem_esquerda, topo_info, f"Nome: {nome_pdf}")
-    can.drawRightString(largura_pagina - margem_direita, topo_info, f"Data do exame: {date_pdf}")
+    can.drawRightString(largura_pagina - margem_direita,
+                        topo_info, f"Data do exame: {date_pdf}")
 
     topo_texto = topo_info - 1.7 * cm
     can.setFont("Helvetica-Bold", 14)
