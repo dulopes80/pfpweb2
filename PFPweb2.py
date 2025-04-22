@@ -12,22 +12,29 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.enums import TA_JUSTIFY
 import base64
 import re
-import tempfile  # Importa módulo para diretório temporário
+import tempfile
 
 # Configure o Streamlit imediatamente após os imports!
 st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 
-# Variáveis globais e caminhos
-PASTA_PROJETO = os.path.join(os.path.expanduser("~"), "Desktop", "Projeto1", "Projeto2")
+# ---------------------------
+# Definição de caminhos relativos
+# ---------------------------
+# Diretório do projeto (mesmo diretório onde está esse script)
+PASTA_PROJETO = os.path.dirname(__file__)
+
+# O arquivo laudos.json deve estar na raiz do repositório
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
-# Define dinamicamente o CAMINHO_SAIDA: se a pasta Desktop existir, usa-a; caso contrário, usa o diretório temporário.
+
+# Para o diretório de saída: se houver uma pasta Desktop, usa-a; caso contrário, um diretório temporário
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 if os.path.isdir(desktop_path):
     CAMINHO_SAIDA = desktop_path
 else:
     CAMINHO_SAIDA = tempfile.gettempdir()
 
-CAMINHO_CARIMBOS = "C:\\Users\\Eduardo\\Desktop\\Teste\\PSG"
+# A pasta PSG e os carimbos devem estar no repositório (na mesma pasta do script ou em um subdiretório)
+CAMINHO_CARIMBOS = os.path.join(PASTA_PROJETO, "PSG")
 CAMINHO_MARCA = os.path.join(CAMINHO_CARIMBOS, "marca2.pdf")
 
 DIC_CARIMBOS = {
@@ -37,6 +44,9 @@ DIC_CARIMBOS = {
     "Dr. Rogério": "carimborogerio.jpg"
 }
 
+# ---------------------------
+# Funções auxiliares
+# ---------------------------
 def carregar_laudos():
     if not os.path.exists(CAMINHO_LAUDOS):
         return {}
@@ -53,10 +63,14 @@ def salvar_laudos(laudos):
 
 def visualizar_pdf_streamlit(pdf_file):
     if pdf_file is not None:
+        # Reinicia o ponteiro antes de ler
+        pdf_file.seek(0)
         base64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
         pdf_viewer = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="900" type="application/pdf"></iframe>'
         st.markdown("### Visualização do PDF Original")
         st.markdown(pdf_viewer, unsafe_allow_html=True)
+        # Reinicia novamente para que o arquivo esteja disponível depois
+        pdf_file.seek(0)
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
     # Reposiciona o ponteiro para o início do arquivo PDF
