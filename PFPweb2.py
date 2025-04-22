@@ -101,7 +101,7 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     styles = getSampleStyleSheet()
     estilo_laudo = styles["Normal"]
     estilo_laudo.fontName = "Helvetica"
-    estilo_laudo.fontSize = 12
+    estilo_laudo.fontSize = 10
     estilo_laudo.leading = 15
     estilo_laudo.alignment = TA_JUSTIFY
 
