@@ -21,16 +21,17 @@ st.set_page_config(page_title="Sistema de Laudos", layout="centered")
 # --------------------------------------------------------
 # Definição de caminhos relativos (baseados na raiz do repositório)
 # --------------------------------------------------------
-PASTA_PROJETO = os.path.dirname(__file__)  # Diretório onde este script está
+PASTA_PROJETO = os.path.dirname(__file__)  # Diretório do script
 CAMINHO_LAUDOS = os.path.join(PASTA_PROJETO, "laudos.json")
-# Diretório de saída: se houver uma pasta Desktop, utiliza-a; caso contrário, utiliza um diretório temporário
+
+# Se existir a pasta Desktop, será utilizada; caso contrário, um diretório temporário
 desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
 if os.path.isdir(desktop_path):
     CAMINHO_SAIDA = desktop_path
 else:
     CAMINHO_SAIDA = tempfile.gettempdir()
 
-# Os arquivos de carimbos e da marca d'água devem estar na raiz do repositório (junto com este script)
+# Arquivos de carimbo e marca d'água
 CAMINHO_CARIMBOS = PASTA_PROJETO  
 CAMINHO_MARCA = os.path.join(PASTA_PROJETO, "marca2.pdf")
 
@@ -58,19 +59,30 @@ def salvar_laudos(laudos):
     with open(CAMINHO_LAUDOS, "w", encoding="utf-8") as f:
         json.dump(laudos, f, ensure_ascii=False, indent=2)
 
-def visualizar_pdf_streamlit(pdf_file):
+def visualizar_pdf_blob(pdf_file):
+    """
+    Essa função lê o PDF, o codifica em base64 e utiliza JavaScript para criar um blob,
+    abrindo o PDF em uma nova aba. Essa abordagem contorna problemas de conteúdo misto no Chrome.
+    """
     if pdf_file is not None:
-        pdf_file.seek(0)  # Reinicia o ponteiro do arquivo
-        base64_pdf = base64.b64encode(pdf_file.read()).decode("utf-8")
-        # Utilizando <iframe> para exibir o PDF; ajuste o tamanho conforme necessário.
+        pdf_file.seek(0)
+        pdf_bytes = pdf_file.read()
+        b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
         pdf_viewer_html = f"""
-            <html>
-              <body style="margin: 0; padding: 0;">
-                <iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="900px" frameborder="0"></iframe>
-              </body>
-            </html>
+        <script>
+            const b64Data = "{b64_pdf}";
+            const binaryString = window.atob(b64Data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {{
+                bytes[i] = binaryString.charCodeAt(i);
+            }}
+            const blob = new Blob([bytes], {{ type: 'application/pdf' }});
+            const blobUrl = URL.createObjectURL(blob);
+            window.open(blobUrl);
+        </script>
         """
-        components.html(pdf_viewer_html, height=900)
+        components.html(pdf_viewer_html, height=0)
         pdf_file.seek(0)
 
 def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretação de resultados", nome_medico=None, nome_arquivo_carimbo=None):
@@ -81,27 +93,18 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     margem_esquerda = 2 * cm
     margem_direita = 2 * cm
 
-    # Extração dos campos "Nome:" e "Data do exame:" do PDF
+    # Extrai os campos "Nome:" e "Data do exame:" do PDF original
     texto_pdf = ""
     for page in reader.pages:
         parte = page.extract_text()
         if parte:
             texto_pdf += parte + "\n"
 
-    # Para depuração, descomente a linha abaixo:
-    # st.write("Texto extraído do PDF:", texto_pdf)
-
     match_nome = re.search(r"Nome:\s*([^\n\r]+)", texto_pdf)
-    if match_nome:
-        nome_pdf = match_nome.group(1).strip()
-    else:
-        nome_pdf = "N/A"
+    nome_pdf = match_nome.group(1).strip() if match_nome else "N/A"
 
     match_date = re.search(r"(?:Date do exame:|Data do exame:)\s*([^\n\r]{1,10})", texto_pdf)
-    if match_date:
-        date_pdf = match_date.group(1).strip()
-    else:
-        date_pdf = "N/A"
+    date_pdf = match_date.group(1).strip() if match_date else "N/A"
     
     # Cria um canvas para compor a nova página de laudo
     packet = BytesIO()
@@ -112,7 +115,6 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     can.drawString(margem_esquerda, topo_info, f"Nome: {nome_pdf}")
     can.drawRightString(largura_pagina - margem_direita, topo_info, f"Data do exame: {date_pdf}")
 
-    # Coloca o título 0,5 cm mais abaixo
     topo_texto = topo_info - 1.7 * cm
     can.setFont("Helvetica-Bold", 14)
     can.drawString(margem_esquerda, topo_texto, titulo_laudo)
@@ -131,10 +133,12 @@ def adicionar_laudo_ao_pdf(pdf_original, texto_laudo, titulo_laudo="Interpretaç
     frame_texto = Frame(margem_esquerda, pos_texto_y, largura_texto, altura_texto, showBoundary=0)
     frame_texto.addFromList([paragrafo_laudo], can)
 
-    # Inserção do carimbo
+    # Inserção do carimbo utilizando leitura em memória
     caminho_carimbo = os.path.join(CAMINHO_CARIMBOS, nome_arquivo_carimbo)
     if os.path.exists(caminho_carimbo):
-        carimbo = ImageReader(caminho_carimbo)
+        with open(caminho_carimbo, "rb") as f:
+            carimbo_data = f.read()
+        carimbo = ImageReader(BytesIO(carimbo_data))
         largura_carimbo = 3.4 * cm
         altura_carimbo = 2 * cm
         pos_x = largura_pagina - largura_carimbo - 3 * cm
@@ -185,7 +189,8 @@ def aba_laudar():
     laudos = carregar_laudos()
     
     arquivo_pdf = st.file_uploader("Selecione o arquivo PDF", type="pdf")
-    visualizar_pdf_streamlit(arquivo_pdf)
+    if arquivo_pdf:
+        visualizar_pdf_blob(arquivo_pdf)
     
     st.markdown("### Selecione os textos que deseja incluir")
     selecionados = []
@@ -199,6 +204,7 @@ def aba_laudar():
     if texto_final:
         st.text_area("Texto do Laudo (Edite se necessário)", value=texto_final, height=200, key="laudo_editado")
     
+    # Salva uma cópia do PDF enviado na pasta de saída
     if arquivo_pdf:
         caminho_pdf = os.path.join(CAMINHO_SAIDA, arquivo_pdf.name)
         with open(caminho_pdf, "wb") as f:
@@ -221,7 +227,6 @@ def aba_laudar():
             nome_medico=nome_medico,
             nome_arquivo_carimbo=arquivo_carimbo
         )
-        # Renomeia substituindo "report" por "assinado"
         nome_arquivo = os.path.splitext(arquivo_pdf.name)[0] + "_assinado.pdf"
         caminho_final = os.path.join(CAMINHO_SAIDA, nome_arquivo)
         
@@ -249,6 +254,9 @@ def editar_laudos():
         except Exception as e:
             st.error(f"Erro ao validar o JSON: {e}")
 
+# --------------------------------------------------------
+# Interface principal com menu lateral
+# --------------------------------------------------------
 st.sidebar.title("Menu")
 pagina = st.sidebar.radio("Escolha a página", ["Laudar", "Editar Laudo"])
 
