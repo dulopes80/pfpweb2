@@ -66,7 +66,7 @@ def visualizar_pdf(pdf_file):
     if pdf_file is not None:
         pdf_bytes = pdf_file.read()
         # Exibe o PDF inline na própria página (sem abrir nova janela)
-        pdf_viewer(pdf_bytes)
+        pdf_viewer(pdf_bytes, annotations=[])
         pdf_file.seek(0)
 
 
