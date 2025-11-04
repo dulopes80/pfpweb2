@@ -31,7 +31,7 @@
     "DLCO reduzida grave": "Capacidade de difusão do monóxido de carbono acentuadamente reduzida..",
     "DLCO aumentada": "Aumento da capacidade de difusão do monóxido de carbono.",
     "DLCO corrigida por Hb normal": "Após correção pela hemoglobina, a DLCO permanece dentro dos limites da normalidade.",
-    "DLCO corrigida por Hb reduzida": "Após correção pela hemoglobina, a DLCO corrigida mostra redução compatível com alteração verdadeira da difusão."
+    "DLCO corrigida por Hb reduzida": "Após correção pela hemoglobina, a DLCO corrigida mostra redução verdadeira da difusão."
   },
   "Pressões respiratórias máximas": {
     "Força muscular respiratória normal": "Pressões respiratórias máximas dentro dos limites da normalidade, sem evidências de fraqueza muscular.",
@@ -44,6 +44,6 @@
     "Fraqueza expiratória grave": "Pemax severamente reduzida, indicativa de fraqueza muscular expiratória importante, com risco de ineficácia de tosse e acúmulo de secreções."
   },
   "Dificuldade tecnica": {
-    "Dificuldade tecnica": "Observação: O exame foi tecnicamente limitado devido à colaboração subótima da paciente durante as manobras expiratórias forçadas. Consequentemente, os critérios de reprodutibilidade, recomendados pelas diretrizes da SBPT, não foram plenamente atingidos. Sugere-se que os resultados sejam interpretados com cautela, considerando a possível subestimação dos volumes e fluxos pulmonares.",
+    "Dificuldade tecnica": "Observação: O exame foi tecnicamente limitado devido à colaboração subótima da paciente durante as manobras expiratórias forçadas. Consequentemente, os critérios de reprodutibilidade, recomendados pelas diretrizes da SBPT, não foram plenamente atingidos. Sugere-se que os resultados sejam interpretados com cautela, considerando a possível subestimação dos volumes e fluxos pulmonares."
   }
 }
