@@ -25,7 +25,7 @@
     "Redução isolada da CVF": "CVF reduzida com CPT normal ou aumentada, podendo indicar aprisionamento sem padrão restritivo verdadeiro (padrão pseudorrestritivo)."
   },
   "Difusão de CO": {
-    "DLCO normal": "Capacidade de difusão do monóxido de carbono dentro dos limites da normalidade, sem alterações significativas na barreira alvéolo-capilar.",
+    "DLCO normal": "Capacidade de difusão do monóxido de carbono dentro dos limites da normalidade.",
     "DLCO reduzida leve": "Capacidade de difusão do monóxido de carbono discretamente reduzida.",
     "DLCO reduzida moderada": "Capacidade de difusão do monóxido de carbono moderadamente reduzida.",
     "DLCO reduzida grave": "Capacidade de difusão do monóxido de carbono acentuadamente reduzida..",
@@ -34,7 +34,7 @@
     "DLCO corrigida por Hb reduzida": "Após correção pela hemoglobina, a DLCO corrigida mostra redução compatível com alteração verdadeira da difusão."
   },
   "Pressões respiratórias máximas": {
-    "Força muscular respiratória normal": "Pressões respiratórias máximas dentro dos limites da normalidade, sem evidências de fraqueza muscular inspiratória ou expiratória.",
+    "Força muscular respiratória normal": "Pressões respiratórias máximas dentro dos limites da normalidade, sem evidências de fraqueza muscular.",
     "Fraqueza muscular": "Pressões respiratórias máximas reduzidas.",
     "Fraqueza inspiratória leve": "Pimax levemente reduzida, podendo indicar início de comprometimento da musculatura inspiratória.",
     "Fraqueza inspiratória moderada": "Pimax moderadamente reduzida, compatível com disfunção muscular inspiratória clinicamente relevante.",
@@ -42,5 +42,8 @@
     "Fraqueza expiratória leve": "Pemax levemente reduzida, podendo refletir redução da força dos músculos expiratórios.",
     "Fraqueza expiratória moderada": "Pemax moderadamente reduzida, compatível com disfunção muscular expiratória.",
     "Fraqueza expiratória grave": "Pemax severamente reduzida, indicativa de fraqueza muscular expiratória importante, com risco de ineficácia de tosse e acúmulo de secreções."
+  },
+  "Dificuldade tecnica": {
+    "Dificuldade tecnica": "Observação: O exame foi tecnicamente limitado devido à colaboração subótima da paciente durante as manobras expiratórias forçadas. Consequentemente, os critérios de reprodutibilidade, recomendados pelas diretrizes da SBPT, não foram plenamente atingidos. Sugere-se que os resultados sejam interpretados com cautela, considerando a possível subestimação dos volumes e fluxos pulmonares.",
   }
 }
